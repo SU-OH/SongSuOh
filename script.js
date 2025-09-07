@@ -45,6 +45,9 @@ class LanguageManager {
             if (text) {
                 if (element.tagName === 'TITLE') {
                     element.textContent = text;
+                } else if (element.classList.contains('typing-text')) {
+                    // Skip typing text, it will be handled separately
+                    return;
                 } else {
                     element.textContent = text;
                 }
@@ -53,6 +56,14 @@ class LanguageManager {
 
         // Update document language
         document.documentElement.lang = this.currentLang;
+        
+        // Restart typing animation for the new language
+        const animationManager = window.PortfolioApp?.getComponent('animationManager');
+        if (animationManager && typeof animationManager.initTypingAnimation === 'function') {
+            setTimeout(() => {
+                animationManager.initTypingAnimation();
+            }, 300);
+        }
     }
 
     updateToggleButton() {
@@ -256,7 +267,46 @@ class AnimationManager {
             if (heroContent) {
                 heroContent.classList.add('fade-in-up');
             }
+            
+            // Initialize typing animation
+            this.initTypingAnimation();
         });
+    }
+    
+    initTypingAnimation() {
+        const typingText = document.querySelector('.typing-text');
+        const cursor = document.querySelector('.cursor');
+        
+        if (!typingText || !cursor) return;
+        
+        const currentLang = document.documentElement.lang || 'ko';
+        const koText = typingText.getAttribute('data-ko');
+        const enText = typingText.getAttribute('data-en');
+        const text = currentLang === 'ko' ? koText : enText;
+        
+        if (!text) return;
+        
+        // Reset animation
+        typingText.style.animation = 'none';
+        typingText.offsetHeight; // Trigger reflow
+        
+        // Set up typing effect
+        typingText.innerHTML = '';
+        typingText.style.opacity = '1';
+        
+        let index = 0;
+        const typeInterval = setInterval(() => {
+            if (index < text.length) {
+                typingText.innerHTML += text.charAt(index);
+                index++;
+            } else {
+                clearInterval(typeInterval);
+                // Add glow effect after typing is complete
+                setTimeout(() => {
+                    typingText.style.animation = 'textGlow 2s ease-in-out infinite alternate';
+                }, 1000);
+            }
+        }, 100);
     }
 }
 
